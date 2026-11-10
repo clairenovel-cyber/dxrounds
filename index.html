@@ -1,0 +1,848 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Dx Rounds</title>
+<meta name="description" content="Case-based diagnosis practice for clinical psychology.">
+<meta name="theme-color" content="#1E2A45">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Dx Rounds">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700;800&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#F3F5F2; --card:#FFFFFF; --ink:#1E2A45; --muted:#5B6579; --rule:#D3DCE7;
+  --stamp:#A8323E; --hit:#2F7D4F; --near:#B87A10; --miss:#7D8594; --focus:#2B59C3;
+  --hit-bg:#E3F1E8; --near-bg:#FBF0DA; --miss-bg:#ECEEF1; --stamp-bg:#F7E4E6;
+  --ui:"Public Sans", -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --read:"Source Serif 4", Georgia, "Times New Roman", serif;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --paper:#16202E; --card:#1E2A3C; --ink:#E6ECF4; --muted:#9AA6B8; --rule:#304056;
+    --stamp:#E58893; --hit:#5DBB83; --near:#E3AC44; --miss:#8C95A4; --focus:#8FB0FF;
+    --hit-bg:#1F3A2C; --near-bg:#3A3020; --miss-bg:#2A3445; --stamp-bg:#3E2329;
+    color-scheme: dark;
+  }
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{background:var(--paper);color:var(--ink);font-family:var(--ui);font-size:16px;line-height:1.5;-webkit-text-size-adjust:100%}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+.wrap{max-width:560px;margin:0 auto;padding:0 18px 48px}
+header.bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--paper);display:flex;align-items:center;justify-content:space-between;padding:12px 18px;max-width:560px;margin:0 auto}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);background:var(--paper);z-index:10}
+.brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:20px;letter-spacing:-0.02em;background:none;border:0;padding:0}
+.brand .tiles{display:flex;gap:3px}
+.brand .tiles i{width:9px;height:9px;border-radius:2px;display:block}
+.iconbtn{background:none;border:1px solid var(--rule);border-radius:10px;width:40px;height:40px;display:grid;place-items:center}
+.iconbtn svg{width:20px;height:20px}
+h1{font-size:30px;line-height:1.15;letter-spacing:-0.025em;margin:18px 0 8px;font-weight:800}
+h2{font-size:19px;letter-spacing:-0.01em;margin:28px 0 10px;font-weight:700}
+h3{font-size:16px;margin:18px 0 6px;font-weight:700}
+p{margin:0 0 12px}
+.muted{color:var(--muted)}
+.small{font-size:14px}
+.panel{background:var(--card);border:1px solid var(--rule);border-radius:14px;padding:16px}
+.stack>*+*{margin-top:12px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{border:1px solid var(--rule);background:var(--card);border-radius:999px;padding:8px 14px;font-weight:600;font-size:15px}
+.chip[aria-pressed="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.seg{display:grid;grid-template-columns:repeat(3,1fr);border:1px solid var(--rule);border-radius:12px;overflow:hidden}
+.seg button{border:0;background:var(--card);padding:10px 4px;font-weight:600;font-size:15px}
+.seg button+button{border-left:1px solid var(--rule)}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--paper)}
+.primary{display:block;width:100%;border:0;border-radius:14px;background:var(--ink);color:var(--paper);font-weight:700;font-size:17px;padding:15px 18px}
+.primary:disabled{opacity:.45}
+.secondary{display:block;width:100%;border:1px solid var(--rule);border-radius:14px;background:var(--card);font-weight:600;padding:13px 18px}
+.linkbtn{background:none;border:0;padding:0;color:var(--focus);font-weight:600;text-decoration:underline;text-underline-offset:3px}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;text-align:center}
+.stats b{display:block;font-size:22px;letter-spacing:-0.02em}
+.stats span{font-size:12px;color:var(--muted)}
+.hist{list-style:none;margin:0;padding:0}
+.hist li+li{border-top:1px solid var(--rule)}
+.hist button{width:100%;text-align:left;background:none;border:0;padding:12px 2px;display:flex;justify-content:space-between;gap:12px;align-items:center}
+.hist .t{font-weight:600;display:block}
+.hist .s{font-size:13px;color:var(--muted)}
+.score{font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
+
+/* Case file */
+.file{background:var(--card);border:1px solid var(--rule);border-radius:4px 14px 14px 14px;position:relative;margin-top:22px;padding:18px 16px 16px}
+.file .tab{position:absolute;top:-17px;left:-1px;background:var(--card);border:1px solid var(--rule);border-bottom:0;border-radius:8px 8px 0 0;padding:3px 12px 2px;font-size:13px;font-weight:700;color:var(--muted)}
+.meta{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+.tag{font-size:13px;font-weight:600;border-radius:6px;padding:2px 8px;background:var(--miss-bg)}
+.tag.dom{background:var(--ink);color:var(--paper)}
+.referral{border-left:3px solid var(--stamp);padding:2px 0 2px 12px;margin:10px 0 14px;font-weight:600}
+.vignette{font-family:var(--read);font-size:17.5px;line-height:1.62}
+.clues{list-style:none;margin:14px 0 0;padding:0}
+.clues li{background:var(--near-bg);border-radius:10px;padding:10px 12px;font-family:var(--read);font-size:16.5px;line-height:1.5}
+.clues li+li{margin-top:8px}
+.clues li b{font-family:var(--ui);font-size:13px;display:block;color:var(--near)}
+
+/* Wordle row: the one bold element */
+.attempts{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:20px 0 6px}
+.slot{aspect-ratio:2.6/1;border:2px solid var(--rule);border-radius:10px;display:grid;place-items:center;font-weight:800;font-size:13px;text-align:center;padding:4px;line-height:1.15;perspective:600px}
+.slot.filled{border-color:transparent;color:#fff;animation:flip .45s ease both}
+.slot.hit{background:var(--hit)} .slot.near{background:var(--near)} .slot.miss{background:var(--miss)}
+@keyframes flip{0%{transform:rotateX(90deg)}100%{transform:rotateX(0)}}
+@media (prefers-reduced-motion: reduce){.slot.filled{animation:none}}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:13px;color:var(--muted);margin-bottom:14px}
+.legend i{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+
+.opts{display:grid;gap:8px}
+.opt{display:flex;gap:12px;align-items:flex-start;text-align:left;width:100%;background:var(--card);border:1.5px solid var(--rule);border-radius:12px;padding:12px 14px;font-size:16px;font-weight:500;line-height:1.35}
+.opt .box{flex:0 0 22px;height:22px;border:2px solid var(--muted);border-radius:6px;margin-top:1px;display:grid;place-items:center;font-size:14px;font-weight:800}
+.opt.round .box{border-radius:50%}
+.opt[aria-pressed="true"]{border-color:var(--ink)}
+.opt[aria-pressed="true"] .box{background:var(--ink);border-color:var(--ink);color:var(--paper)}
+.opt:disabled{cursor:default}
+.opt.ok{border-color:var(--hit);background:var(--hit-bg)}
+.opt.ok .box{background:var(--hit);border-color:var(--hit);color:#fff}
+.opt.bad{border-color:var(--stamp);background:var(--stamp-bg)}
+.opt.bad .box{background:var(--stamp);border-color:var(--stamp);color:#fff}
+.opt.missed{border-style:dashed;border-color:var(--hit)}
+.opt.near{border-color:var(--near);background:var(--near-bg)}
+.opt.gone{opacity:.5}
+.opt small{display:block;font-size:13px;color:var(--muted);font-weight:500;margin-top:2px}
+
+.qhead{display:flex;justify-content:space-between;align-items:center;margin:26px 0 8px}
+.cat{font-size:13px;font-weight:700;color:var(--stamp)}
+.progress{font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+.prompt{font-size:18px;font-weight:700;line-height:1.35;margin:0 0 4px;letter-spacing:-0.01em}
+.hint{font-size:14px;color:var(--muted);margin:0 0 12px}
+.verdict{border-radius:12px;padding:12px 14px;margin-top:12px}
+.verdict.good{background:var(--hit-bg)} .verdict.poor{background:var(--stamp-bg)}
+.verdict b{display:block;margin-bottom:2px}
+.actions{margin-top:16px}
+
+/* Debrief */
+.result{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.result .big{font-size:40px;font-weight:800;letter-spacing:-0.03em;font-variant-numeric:tabular-nums}
+.grid-emoji{font-size:22px;letter-spacing:2px}
+.answer{font-size:22px;font-weight:800;letter-spacing:-0.02em;margin:2px 0 4px}
+.readable{font-family:var(--read);font-size:17px;line-height:1.62}
+ul.plain{margin:0;padding-left:20px}
+ul.plain li{margin:4px 0}
+.ddx{list-style:none;margin:0;padding:0}
+.ddx li{padding:12px 0}
+.ddx li+li{border-top:1px solid var(--rule)}
+.ddx .row{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.ddx .name{font-weight:700}
+.verd{font-size:13px;font-weight:700;border-radius:6px;padding:1px 8px;white-space:nowrap}
+.verd.Primary{background:var(--hit-bg);color:var(--hit)}
+.verd.Consider{background:var(--near-bg);color:var(--near)}
+.verd.Ruled{background:var(--miss-bg);color:var(--muted)}
+.ddx p{margin:4px 0 0;font-size:15px}
+.plan dt{font-weight:700;margin-top:10px}
+.plan dd{margin:2px 0 0}
+.note{font-size:13px;color:var(--muted);margin-top:22px}
+
+/* Loading */
+.loading{text-align:center;padding:60px 10px}
+.dots{display:flex;gap:8px;justify-content:center;margin-bottom:18px}
+.dots i{width:18px;height:18px;border-radius:4px;background:var(--rule);animation:pulse 1.2s infinite ease-in-out}
+.dots i:nth-child(2){animation-delay:.15s}.dots i:nth-child(3){animation-delay:.3s}
+@keyframes pulse{0%,100%{background:var(--rule)}50%{background:var(--near)}}
+@media (prefers-reduced-motion: reduce){.dots i{animation:none}}
+.error{background:var(--stamp-bg);border-radius:12px;padding:14px;margin-top:16px}
+.error b{display:block;margin-bottom:4px}
+
+/* Settings dialog */
+dialog{border:0;border-radius:18px;padding:0;width:min(560px,94vw);max-height:90vh;background:var(--card);color:var(--ink)}
+dialog::backdrop{background:rgba(20,28,44,.55)}
+.dlg{padding:20px}
+.dlg h2{margin-top:0}
+label.f{display:block;font-weight:600;margin:14px 0 6px}
+input[type=password],input[type=text],select{width:100%;border:1px solid var(--rule);border-radius:10px;padding:11px 12px;background:var(--paper)}
+.row2{display:flex;gap:8px}
+.row2>*{flex:1}
+.switch{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:16px}
+.switch input{width:22px;height:22px}
+.status{font-size:14px;margin-top:8px;color:var(--muted)}
+.status.ok{color:var(--hit)} .status.bad{color:var(--stamp)}
+.hidden{display:none!important}
+.toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--paper);padding:10px 16px;border-radius:10px;font-weight:600;font-size:15px;z-index:30}
+</style>
+</head>
+<body>
+<header class="bar">
+  <button class="brand" id="homeBtn" aria-label="Dx Rounds home">
+    <span class="tiles" aria-hidden="true"><i style="background:var(--miss)"></i><i style="background:var(--near)"></i><i style="background:var(--hit)"></i></span>
+    Dx Rounds
+  </button>
+  <button class="iconbtn" id="settingsBtn" aria-label="Settings">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+  </button>
+</header>
+
+<main class="wrap" id="app"></main>
+
+<dialog id="settings" aria-labelledby="setTitle">
+  <form method="dialog" class="dlg" id="setForm">
+    <h2 id="setTitle">Settings</h2>
+    <p class="small muted">Cases are written by Google Gemini using your own free API key. The key stays on this phone and is sent only to Google.</p>
+    <label class="f" for="keyInput">Gemini API key</label>
+    <input type="password" id="keyInput" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Paste your key">
+    <p class="small muted" style="margin-top:6px">Get a free key at <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com/apikey</a>.</p>
+    <div class="row2" style="margin-top:4px">
+      <button type="button" class="secondary" id="testKey">Check key and load models</button>
+    </div>
+    <div class="status" id="keyStatus" role="status"></div>
+    <label class="f" for="modelSelect">Model</label>
+    <select id="modelSelect"></select>
+    <p class="small muted" style="margin-top:6px">Flash models are on Gemini's free tier. If you hit the daily limit, switch to a Flash-Lite model.</p>
+    <div class="switch">
+      <label for="phToggle"><b>Philippine setting</b><br><span class="small muted">Filipino names, places and family context</span></label>
+      <input type="checkbox" id="phToggle">
+    </div>
+    <div class="actions stack">
+      <button class="primary" value="save" id="saveSettings">Save settings</button>
+      <button type="button" class="secondary" id="clearData">Clear history and stats</button>
+    </div>
+  </form>
+</dialog>
+
+<script>
+"use strict";
+/* ---------------- Storage ---------------- */
+const LS = {
+  get(k, d){ try{ const v = localStorage.getItem("dxr_"+k); return v === null ? d : JSON.parse(v); }catch(e){ return d; } },
+  set(k, v){ try{ localStorage.setItem("dxr_"+k, JSON.stringify(v)); }catch(e){} }
+};
+const S = {
+  settings: Object.assign({ apiKey:"", model:"", models:[], domain:"Random", difficulty:"Medium", ph:true }, LS.get("settings", {})),
+  stats: Object.assign({ played:0, solved:0, points:0, max:0, streak:0, best:0 }, LS.get("stats", {})),
+  history: LS.get("history", [])
+};
+const saveSettings = () => LS.set("settings", S.settings);
+const saveStats = () => LS.set("stats", S.stats);
+const saveHistory = () => LS.set("history", S.history.slice(0, 40));
+
+const DOMAINS = ["Health", "Addiction", "Forensic", "Child", "Adult"];
+const DOMAIN_NAMES = { Health:"Health psychology", Addiction:"Addiction", Forensic:"Forensic", Child:"Child and adolescent", Adult:"Adult / general" };
+const MAX_GUESSES = 3;
+
+/* ---------------- Helpers ---------------- */
+const $ = s => document.querySelector(s);
+const app = $("#app");
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
+function toast(msg){
+  const t = document.createElement("div"); t.className = "toast"; t.textContent = msg; t.setAttribute("role","status");
+  document.body.appendChild(t); setTimeout(() => t.remove(), 2200);
+}
+function shuffleWithMap(arr){
+  const idx = arr.map((_, i) => i);
+  for (let i = idx.length - 1; i > 0; i--){ const j = Math.floor(Math.random() * (i + 1)); [idx[i], idx[j]] = [idx[j], idx[i]]; }
+  return idx; // new order: idx[k] = original index shown at position k
+}
+const norm = s => String(s || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+
+/* ---------------- Gemini ---------------- */
+const API = "https://generativelanguage.googleapis.com/v1beta";
+
+async function listModels(key){
+  const res = await fetch(API + "/models?pageSize=200", { headers:{ "x-goog-api-key": key } });
+  if (!res.ok) throw await apiError(res);
+  const data = await res.json();
+  const skip = /(image|tts|audio|live|embed|robotics|omni|vision|veo|lyria|imagen|aqa|learnlm|computer|native)/i;
+  const names = (data.models || [])
+    .filter(m => {
+      const methods = m.supportedGenerationMethods || m.supportedActions || ["generateContent"];
+      return methods.includes("generateContent") && /gemini/i.test(m.name) && !skip.test(m.name);
+    })
+    .map(m => m.name.replace(/^models\//, ""));
+  const ver = n => { const m = n.match(/gemini-(\d+(?:\.\d+)?)/i); return m ? parseFloat(m[1]) : 0; };
+  const rank = n => /flash-lite/i.test(n) ? 1 : /flash/i.test(n) ? 0 : 2; // Flash first, then Flash-Lite, then others
+  const unstable = n => /(preview|exp|latest)/i.test(n) ? 1 : 0;
+  return [...new Set(names)].sort((a, b) => rank(a) - rank(b) || unstable(a) - unstable(b) || ver(b) - ver(a) || a.localeCompare(b));
+}
+
+async function apiError(res){
+  let msg = "";
+  try{ const j = await res.json(); msg = j.error?.message || ""; }catch(e){}
+  const e = new Error(msg || ("HTTP " + res.status));
+  e.status = res.status; e.raw = msg;
+  if (res.status === 400 && /api key/i.test(msg)) e.friendly = "Google rejected the API key. Paste it again in Settings.";
+  else if (res.status === 401 || res.status === 403) e.friendly = "This API key isn't allowed to use the Gemini API. Create a key at aistudio.google.com/apikey and paste it in Settings.";
+  else if (res.status === 404) e.friendly = "That model isn't available for your key. Open Settings, tap “Check key and load models”, and pick another.";
+  else if (res.status === 429) e.friendly = "You've reached Gemini's free limit for this model. Wait a minute, or switch to a Flash-Lite model in Settings.";
+  else if (res.status >= 500) e.friendly = "Gemini is busy right now. Try again in a moment.";
+  return e;
+}
+
+async function generateJSON(prompt, schema){
+  const { apiKey, model } = S.settings;
+  const url = `${API}/models/${encodeURIComponent(model)}:generateContent`;
+  const base = { contents:[{ role:"user", parts:[{ text: prompt }] }] };
+  // Try the current structured-output format first, then older formats if the API rejects them.
+  const variants = [
+    { generationConfig:{ temperature:1, responseFormat:{ text:{ mimeType:"APPLICATION_JSON", schema } } } },
+    { generationConfig:{ temperature:1, responseMimeType:"application/json", responseJsonSchema: schema } },
+    { generationConfig:{ temperature:1, responseMimeType:"application/json" } },
+    { generationConfig:{ temperature:1 } }
+  ];
+  let lastErr;
+  for (const v of variants){
+    const res = await fetch(url, { method:"POST", headers:{ "Content-Type":"application/json", "x-goog-api-key": apiKey }, body: JSON.stringify(Object.assign({}, base, v)) });
+    if (!res.ok){
+      const err = await apiError(res);
+      if (res.status === 400 && !/api key/i.test(err.raw || "")) { lastErr = err; continue; } // format not accepted: try next
+      throw err;
+    }
+    const data = await res.json();
+    const block = data.promptFeedback?.blockReason;
+    const cand = data.candidates?.[0];
+    if (block || /SAFETY|PROHIBITED|BLOCK/i.test(cand?.finishReason || "")){
+      const e = new Error("blocked"); e.friendly = "Gemini's safety filter blocked this case. Tap “Try again” for a different one."; throw e;
+    }
+    const text = (cand?.content?.parts || []).filter(p => !p.thought).map(p => p.text || "").join("");
+    return parseJSON(text);
+  }
+  throw lastErr || new Error("Request failed");
+}
+
+function parseJSON(text){
+  let t = String(text || "").trim().replace(/^```(?:json)?/i, "").replace(/```$/, "").trim();
+  const a = t.indexOf("{"), b = t.lastIndexOf("}");
+  if (a >= 0 && b > a) t = t.slice(a, b + 1);
+  return JSON.parse(t);
+}
+
+/* ---------------- Case schema and prompt ---------------- */
+const CASE_SCHEMA = {
+  type:"object",
+  properties:{
+    title:{ type:"string", description:"Short neutral case title that does not reveal the diagnosis" },
+    domain:{ type:"string", enum: DOMAINS },
+    patient:{ type:"object", properties:{ alias:{type:"string"}, age:{type:"string"}, sex:{type:"string"}, setting:{type:"string"} }, required:["alias","age","sex","setting"] },
+    referral_question:{ type:"string" },
+    vignette:{ type:"string" },
+    clues:{ type:"array", items:{ type:"string" }, minItems:3, maxItems:3 },
+    diagnosis_options:{ type:"array", minItems:6, maxItems:6, items:{ type:"object", properties:{ label:{type:"string"}, chapter:{type:"string"} }, required:["label","chapter"] } },
+    correct_diagnosis_index:{ type:"integer" },
+    specifier:{ type:"string", description:"Severity or specifier for the correct diagnosis, or empty" },
+    questions:{ type:"array", minItems:4, maxItems:4, items:{ type:"object", properties:{
+      category:{ type:"string" }, type:{ type:"string", enum:["single","multi"] }, prompt:{ type:"string" },
+      options:{ type:"array", items:{ type:"string" }, minItems:4, maxItems:5 },
+      correct:{ type:"array", items:{ type:"integer" } }, rationale:{ type:"string" } },
+      required:["category","type","prompt","options","correct","rationale"] } },
+    debrief:{ type:"object", properties:{
+      overview:{ type:"string" }, reasoning:{ type:"string" },
+      criteria_met:{ type:"array", items:{ type:"string" } },
+      differentials:{ type:"array", items:{ type:"object", properties:{ diagnosis:{type:"string"}, verdict:{ type:"string", enum:["Primary","Consider","Ruled out"] }, reasoning:{type:"string"} }, required:["diagnosis","verdict","reasoning"] } },
+      assessment_plan:{ type:"array", items:{ type:"string" } },
+      functioning_areas:{ type:"array", items:{ type:"string" } },
+      intervention_plan:{ type:"array", items:{ type:"object", properties:{ area:{type:"string"}, actions:{type:"string"} }, required:["area","actions"] } },
+      domain_note:{ type:"string" } },
+      required:["overview","reasoning","criteria_met","differentials","assessment_plan","functioning_areas","intervention_plan","domain_note"] }
+  },
+  required:["title","domain","patient","referral_question","vignette","clues","diagnosis_options","correct_diagnosis_index","specifier","questions","debrief"]
+};
+
+const DOMAIN_QUESTIONS = {
+  Health: "assessment procedure for the referral question (holistic: physical, psychological, social; pain or quality-of-life measures where relevant); psychological factors affecting the medical condition; areas of functioning; holistic care and psychotherapeutic considerations (e.g. liaison with the medical team).",
+  Addiction: "psychosocial and environmental problem areas that trigger and maintain use; precipitating factors that turned use into a disorder; DSM-5-TR severity (mild 2–3, moderate 4–5, severe 6+ criteria); assessment and screening tools; holistic intervention (detox and withdrawal management, motivational interviewing, relapse prevention, family).",
+  Forensic: "assessment procedure and psychological test battery for the legal referral question (including validity or malingering checks where relevant); ethical issues when a court requests records or testimony (confidentiality limits, dual roles, informed consent); how psychology explains behaviours such as self-blame, recantation or memory gaps; risk; holistic intervention (biological, psychological, family, legal, spiritual, aftercare).",
+  Child: "measures for assessing the child (multi-informant, age-appropriate, non-verbal methods if needed); best diagnosis; how to involve parents or caregivers in treatment; areas of functioning (school, family, peers, safety); safeguarding where relevant.",
+  Adult: "assessment procedure and test battery for the referral question (e.g. fitness to work, study or proceed with an internship); areas of functioning to consider before deciding fitness (cognitive, reality testing, emotional regulation, social, occupational, safety and risk, physical); holistic intervention and risk management."
+};
+
+function buildPrompt(domain, difficulty, ph, avoid){
+  const diffText = {
+    Easy: "a classic, textbook presentation with clear duration and core criteria",
+    Medium: "a realistic presentation with one comorbidity or stressor that makes the differential less obvious",
+    Hard: "a subtle presentation where exclusion criteria, duration, onset or specifiers decide the diagnosis between close differentials"
+  }[difficulty];
+  return `You are a clinical psychology professor writing exam-style case studies for a student reviewer game.
+
+Write ONE new fictional case for the domain "${DOMAIN_NAMES[domain]}" at ${difficulty} difficulty: ${diffText}.
+${ph ? "Set it in the Philippines with Filipino names, places and family context where natural (for example OFW parents, extended family caregiving, faith, school or barangay settings)." : "Use a neutral international setting."}
+Every person must be fictional. Never base the case on a real person or a real court case. Keep any abuse, violence or self-harm non-graphic.
+${avoid.length ? "Do not use any of these as the correct diagnosis (they were used recently): " + avoid.join("; ") + "." : ""}
+
+Case requirements:
+- "vignette": 140–230 words, written like a referral case analysis: presenting problem, history, psychosocial context, relevant quotes. Do NOT name the diagnosis or use its exact key term.
+- "referral_question": the question the referral source wants answered.
+- "clues": 3 extra findings revealed one at a time after wrong guesses, each more decisive (duration, exclusions, key symptom), never naming the diagnosis.
+- "diagnosis_options": 6 DSM-5-TR diagnoses, each with its DSM-5-TR chapter name exactly as in the DSM-5-TR table of contents (e.g. "Anxiety Disorders", "Trauma- and Stressor-Related Disorders", "Substance-Related and Addictive Disorders"). Include the correct diagnosis and at least 2 distractors from the same chapter, so near-misses are possible. "correct_diagnosis_index" is the 0-based index of the correct one.
+- "specifier": severity or specifier for the correct diagnosis if it applies, otherwise "".
+- "questions": exactly 4 exam questions in the style of these class activity questions:
+  • "Given the reason for referral, what should be included in the assessment procedure? Specify the psychological test battery."
+  • "What disorders will you include in the differential diagnosis?"
+  • "Which areas of functioning need to be considered?"
+  • "If holistic care is to be considered, what should be the areas of focus of clinical intervention?"
+  For this domain also draw on: ${DOMAIN_QUESTIONS[domain]}
+  Mix categories (no two questions with the same category). At least 2 questions must be "multi" (select all that apply) with 5 options and 2–4 correct. "single" questions have 4 options and exactly 1 correct. "correct" lists 0-based option indices. Distractors must be plausible to a student but clearly wrong to an expert (e.g. an adult test for a child, a contraindicated treatment). "rationale" is 1–2 sentences.
+- "debrief": "overview" (2–3 sentences), "reasoning" (why the diagnosis fits, citing DSM-5-TR criteria and duration), "criteria_met" (short list), "differentials" (5–6 entries: the primary diagnosis marked "Primary", others "Consider" or "Ruled out", each with the specific reason), "assessment_plan" (4–7 items naming real, age-appropriate instruments and procedures), "functioning_areas" (4–7 items), "intervention_plan" (4–6 entries with area such as Biological, Psychological, Family and social, Occupational or educational, Legal and safety, Spiritual, Aftercare), "domain_note" (one practical or ethical point).
+
+Be clinically accurate and consistent with DSM-5-TR. Only name tests and treatments that really exist. Return only JSON matching the schema.`;
+}
+
+function validateCase(c){
+  const errs = [];
+  if (!c || typeof c !== "object") return ["not an object"];
+  if (!c.vignette || c.vignette.length < 200) errs.push("vignette");
+  if (!Array.isArray(c.diagnosis_options) || c.diagnosis_options.length < 4) errs.push("options");
+  const ci = c.correct_diagnosis_index;
+  if (!Number.isInteger(ci) || ci < 0 || ci >= (c.diagnosis_options || []).length) errs.push("answer index");
+  if (!Array.isArray(c.questions) || c.questions.length < 3) errs.push("questions");
+  (c.questions || []).forEach((q, i) => {
+    if (!Array.isArray(q.options) || q.options.length < 3) errs.push("q" + i + " options");
+    if (!Array.isArray(q.correct) || !q.correct.length || q.correct.some(k => !Number.isInteger(k) || k < 0 || k >= (q.options || []).length)) errs.push("q" + i + " key");
+  });
+  if (!c.debrief || !c.debrief.overview) errs.push("debrief");
+  return errs;
+}
+function tidyCase(c){
+  c.clues = (c.clues || []).slice(0, MAX_GUESSES);
+  c.questions = c.questions.map(q => {
+    const correct = [...new Set(q.correct)];
+    return Object.assign({}, q, { correct, type: correct.length > 1 ? "multi" : (q.type === "multi" ? "multi" : "single") });
+  });
+  c.domain = DOMAINS.includes(c.domain) ? c.domain : "Adult";
+  c.specifier = c.specifier || "";
+  c.patient = c.patient || {};
+  const d = c.debrief;
+  ["criteria_met","differentials","assessment_plan","functioning_areas","intervention_plan"].forEach(k => { if (!Array.isArray(d[k])) d[k] = []; });
+  return c;
+}
+
+/* ---------------- Built-in sample case (works without a key) ---------------- */
+const SAMPLE = {
+  title:"Missing school after Mama left", domain:"Child",
+  patient:{ alias:"Migo", age:"10", sex:"Male", setting:"Outpatient clinic referral from school" },
+  referral_question:"His teacher and grandmother want to know why Migo keeps missing school and how to help him attend.",
+  vignette:"Migo, 10, has lived with his grandmother and two cousins since his mother left eight months ago to work as a domestic helper in Dubai. His father is not involved. Over the past six months he has missed 23 school days. On school mornings he cries, says his stomach hurts and begs to stay home; the pain settles once he is allowed to stay. He follows his grandmother from room to room, refuses to sleep alone and video-calls his mother several times a day, panicking if she does not answer. He has nightmares about his mother being in an accident and worries that his grandmother will “disappear” when she goes to the market. When he does attend, his teacher says he is quiet but joins in, and at home he plays happily with his cousins when his grandmother is nearby. His paediatrician found no medical cause for the stomach aches.",
+  clues:[
+    "His worries are about harm coming to his mother and grandmother, not about schoolwork, friends or being judged by others.",
+    "Even before his mother left, he cried hard at every separation and needed her to stay until he fell asleep.",
+    "The symptoms have lasted over six months, clearly impair his schooling, and his mood is normal whenever a caregiver is with him."
+  ],
+  diagnosis_options:[
+    { label:"Separation anxiety disorder", chapter:"Anxiety Disorders" },
+    { label:"Generalized anxiety disorder", chapter:"Anxiety Disorders" },
+    { label:"Social anxiety disorder", chapter:"Anxiety Disorders" },
+    { label:"Adjustment disorder with anxiety", chapter:"Trauma- and Stressor-Related Disorders" },
+    { label:"Major depressive disorder", chapter:"Depressive Disorders" },
+    { label:"Somatic symptom disorder", chapter:"Somatic Symptom and Related Disorders" }
+  ],
+  correct_diagnosis_index:0, specifier:"",
+  questions:[
+    { category:"Assessment procedure", type:"multi",
+      prompt:"Given the reason for referral, what should be included in the assessment procedure?",
+      options:["Clinical interview with Migo and his grandmother","School attendance records and a teacher report","A child anxiety rating scale with parent and child forms (e.g. SCARED)","MMPI-3","Projective drawings as the only basis for diagnosis"],
+      correct:[0,1,2], rationale:"A multi-informant, multi-setting assessment shows when and where the anxiety appears. The MMPI-3 is an adult inventory, and drawings alone can't establish a diagnosis." },
+    { category:"Areas of functioning", type:"multi",
+      prompt:"Which areas of functioning need to be considered?",
+      options:["School attendance and learning","Sleep","Relationships with caregivers and peers","Occupational functioning","Driving safety"],
+      correct:[0,1,2], rationale:"School refusal, sleeping alone and attachment are where his impairment shows. Occupational functioning and driving don't apply to a 10-year-old." },
+    { category:"Precipitating factors", type:"single",
+      prompt:"What best explains why his symptoms worsened eight months ago?",
+      options:["His mother's departure to work overseas","A learning disability","Bullying at school","An undiagnosed medical illness"],
+      correct:[0], rationale:"Separation from his main attachment figure triggered the escalation. There's no sign of bullying or learning problems, and the paediatric work-up was normal." },
+    { category:"Holistic intervention", type:"single",
+      prompt:"If holistic care is to be considered, which plan fits best?",
+      options:["CBT with graded exposure to separation and a gradual return to school, with his grandmother coached to support it","Letting him stay home until his mother returns","Long-term benzodiazepines","Punishing him for missing school"],
+      correct:[0], rationale:"CBT with graded exposure and caregiver involvement is first-line for childhood separation anxiety. Staying home reinforces avoidance, and benzodiazepines aren't recommended for children." }
+  ],
+  debrief:{
+    overview:"Migo shows excessive, developmentally inappropriate fear of separation from his attachment figures for over six months, with school refusal, physical complaints and nightmares. This fits separation anxiety disorder, made worse by his mother leaving to work abroad.",
+    reasoning:"His fears centre on harm coming to his mother and grandmother and on being apart from them. DSM-5-TR requires at least three such symptoms lasting at least 4 weeks in children, with significant distress or impairment. He shows persistent worry about losing attachment figures, refusal to go to school, refusal to sleep alone, separation nightmares and physical complaints when separation is expected. The symptoms are tied to separation and ease when caregivers are present, which separates them from generalised or social worries.",
+    criteria_met:["Persistent worry about harm to attachment figures","Refusal to go to school because of fear of separation","Reluctance to sleep without an attachment figure nearby","Repeated nightmares about separation","Physical complaints when separation is expected","Duration over 4 weeks with clear impairment"],
+    differentials:[
+      { diagnosis:"Separation anxiety disorder", verdict:"Primary", reasoning:"Fears are specific to separation and harm to attachment figures, last over 4 weeks and impair schooling." },
+      { diagnosis:"Adjustment disorder with anxiety", verdict:"Ruled out", reasoning:"A stressor is present, but adjustment disorder isn't diagnosed when another disorder's criteria are met, and his separation fears predate the departure." },
+      { diagnosis:"Generalized anxiety disorder", verdict:"Ruled out", reasoning:"His worry isn't spread across many areas such as school performance, health or the future." },
+      { diagnosis:"Social anxiety disorder", verdict:"Ruled out", reasoning:"He joins in at school and isn't afraid of being judged." },
+      { diagnosis:"Somatic symptom disorder", verdict:"Ruled out", reasoning:"Stomach aches appear when separation is expected and settle when he stays home, without excessive health-focused thoughts." },
+      { diagnosis:"Major depressive disorder", verdict:"Consider", reasoning:"Screen mood and sleep, but he still enjoys play with his cousins, so a depressive episode is unlikely now." }
+    ],
+    assessment_plan:["Clinical interview with Migo, his grandmother and, by video, his mother","Teacher report and school attendance records","Child anxiety scale with parent and child forms (e.g. SCARED)","Mental status exam with play-based observation","Review of the paediatric findings"],
+    functioning_areas:["School attendance and learning","Sleep","Family relationships and attachment","Peer and social functioning","Physical complaints"],
+    intervention_plan:[
+      { area:"Psychological", actions:"CBT with psychoeducation, coping skills and graded exposure to separations." },
+      { area:"Family and social", actions:"Coach his grandmother to praise brave behaviour and reduce accommodation; schedule predictable calls with his mother." },
+      { area:"Occupational or educational", actions:"A gradual return-to-school plan with a trusted teacher and a calm place to settle in the morning." },
+      { area:"Biological", actions:"Regular sleep routine; medication only considered by a child psychiatrist if CBT isn't enough." }
+    ],
+    domain_note:"Long parental separations are common in migrant families. Involving the absent parent through scheduled contact can support treatment instead of competing with it."
+  },
+  _sample:true
+};
+
+/* ---------------- Views ---------------- */
+let cur = null; // current game
+
+function renderHome(){
+  cur = null;
+  const st = S.stats, set = S.settings;
+  const acc = st.max ? Math.round(100 * st.points / st.max) : 0;
+  const domains = ["Random", ...DOMAINS];
+  app.innerHTML = `
+    <h1>Read the case. Make the call.</h1>
+    <p class="muted">Each case gives you three guesses at the diagnosis, with a new clue after every miss, then four exam-style questions and a full debrief.</p>
+    <h2>Domain</h2>
+    <div class="chips" role="group" aria-label="Domain">
+      ${domains.map(d => `<button class="chip" data-domain="${d}" aria-pressed="${set.domain === d}">${d === "Random" ? "Random" : esc(d)}</button>`).join("")}
+    </div>
+    <h2>Difficulty</h2>
+    <div class="seg" role="group" aria-label="Difficulty">
+      ${["Easy","Medium","Hard"].map(d => `<button data-diff="${d}" aria-pressed="${set.difficulty === d}">${d}</button>`).join("")}
+    </div>
+    <div class="actions stack">
+      <button class="primary" id="newCase">New case</button>
+      ${set.apiKey ? "" : `<p class="small muted">Add your free Gemini key in <button class="linkbtn" id="openSet">Settings</button> to get new cases. Until then, try the sample.</p>`}
+      <button class="secondary" id="sampleCase">Try the sample case</button>
+    </div>
+    <h2>Your rounds</h2>
+    <div class="panel">
+      <div class="stats">
+        <div><b>${st.played}</b><span>Played</span></div>
+        <div><b>${st.played ? Math.round(100 * st.solved / st.played) : 0}%</b><span>Dx solved</span></div>
+        <div><b>${acc}%</b><span>Points</span></div>
+        <div><b>${st.streak}</b><span>Streak</span></div>
+      </div>
+    </div>
+    ${S.history.length ? `<h2>Recent cases</h2><div class="panel" style="padding:4px 14px"><ul class="hist">
+      ${S.history.slice(0, 12).map((h, i) => `<li><button data-hist="${i}"><span><span class="t">${esc(h.dx)}</span><span class="s">${esc(h.domain)} case, ${new Date(h.date).toLocaleDateString()}</span></span><span class="score">${h.score}/${h.max}</span></button></li>`).join("")}
+    </ul></div>` : ""}
+    <p class="note">Cases are AI-generated for study. Check diagnoses, tests and treatments against the DSM-5-TR and your class notes.</p>`;
+  app.querySelectorAll("[data-domain]").forEach(b => b.onclick = () => { S.settings.domain = b.dataset.domain; saveSettings(); renderHome(); });
+  app.querySelectorAll("[data-diff]").forEach(b => b.onclick = () => { S.settings.difficulty = b.dataset.diff; saveSettings(); renderHome(); });
+  $("#newCase").onclick = newCase;
+  $("#sampleCase").onclick = () => startCase(JSON.parse(JSON.stringify(SAMPLE)));
+  const os = $("#openSet"); if (os) os.onclick = openSettings;
+  app.querySelectorAll("[data-hist]").forEach(b => b.onclick = () => {
+    const h = S.history[+b.dataset.hist];
+    cur = h.game; cur.review = true; renderDebrief();
+  });
+  window.scrollTo(0, 0);
+}
+
+function renderLoading(domain){
+  app.innerHTML = `<div class="loading" role="status" aria-live="polite">
+    <div class="dots" aria-hidden="true"><i></i><i></i><i></i></div>
+    <p><b>Writing a ${esc(DOMAIN_NAMES[domain].toLowerCase())} case</b></p>
+    <p class="muted small" id="loadMsg">This usually takes 10 to 40 seconds.</p>
+  </div>`;
+}
+function renderError(err, retry){
+  app.innerHTML = `<div class="error" role="alert"><b>Couldn't get a new case</b>${esc(err.friendly || err.message || "Something went wrong.")}</div>
+    <div class="actions stack"><button class="primary" id="retry">Try again</button><button class="secondary" id="toSettings">Open settings</button><button class="secondary" id="toHome">Back to home</button></div>`;
+  $("#retry").onclick = retry; $("#toSettings").onclick = openSettings; $("#toHome").onclick = renderHome;
+}
+
+async function newCase(){
+  const set = S.settings;
+  if (!set.apiKey || !set.model){ openSettings(); toast(set.apiKey ? "Pick a model first" : "Add your Gemini key first"); return; }
+  const domain = set.domain === "Random" ? DOMAINS[Math.floor(Math.random() * DOMAINS.length)] : set.domain;
+  renderLoading(domain);
+  const avoid = S.history.filter(h => h.domain === domain).slice(0, 8).map(h => h.dx);
+  const prompt = buildPrompt(domain, set.difficulty, set.ph, avoid);
+  const slow = setTimeout(() => { const m = $("#loadMsg"); if (m) m.textContent = "Still writing. Longer cases can take up to a minute."; }, 25000);
+  try{
+    let c, errs = ["first try"];
+    for (let attempt = 0; attempt < 2 && errs.length; attempt++){
+      c = await generateJSON(prompt, CASE_SCHEMA);
+      errs = validateCase(c);
+    }
+    if (errs.length){ const e = new Error("bad case"); e.friendly = "Gemini returned an incomplete case. Try again."; throw e; }
+    c = tidyCase(c); c.domain = domain; c.difficulty = set.difficulty;
+    startCase(c);
+  }catch(err){
+    renderError(err, newCase);
+  }finally{ clearTimeout(slow); }
+}
+
+function startCase(c){
+  const dxOrder = shuffleWithMap(c.diagnosis_options);
+  cur = {
+    id: Date.now(), data: c, dxOrder,
+    correctPos: dxOrder.indexOf(c.correct_diagnosis_index),
+    guesses: [], dxDone:false, dxSolved:false,
+    qIndex: 0, qOrders: c.questions.map(q => shuffleWithMap(q.options)), qResults: [], picked: new Set(), checked:false
+  };
+  renderCase();
+}
+
+function guessClass(pos){
+  const c = cur.data;
+  if (pos === cur.correctPos) return "hit";
+  const opt = c.diagnosis_options[cur.dxOrder[pos]];
+  const ans = c.diagnosis_options[c.correct_diagnosis_index];
+  return norm(opt.chapter) && norm(opt.chapter) === norm(ans.chapter) ? "near" : "miss";
+}
+
+function caseHeader(){
+  const c = cur.data, p = c.patient || {};
+  const wrong = cur.guesses.filter(g => g !== cur.correctPos).length;
+  const shownClues = cur.dxDone ? c.clues.length : Math.min(wrong, c.clues.length);
+  return `
+    <div class="file">
+      <span class="tab">Case file</span>
+      <div class="meta">
+        <span class="tag dom">${esc(c.domain)}</span>
+        ${c.difficulty ? `<span class="tag">${esc(c.difficulty)}</span>` : ""}
+        ${p.alias ? `<span class="tag">${esc(p.alias)}${p.age ? ", " + esc(p.age) : ""}${p.sex ? ", " + esc(p.sex) : ""}</span>` : ""}
+        ${c._sample ? `<span class="tag">Sample</span>` : ""}
+      </div>
+      ${p.setting ? `<p class="small muted" style="margin:0 0 4px">${esc(p.setting)}</p>` : ""}
+      <p class="referral">${esc(c.referral_question)}</p>
+      <div class="vignette">${esc(c.vignette).split(/\n+/).map(x => `<p>${x}</p>`).join("")}</div>
+      ${shownClues ? `<ol class="clues">${c.clues.slice(0, shownClues).map((x, i) => `<li><b>New finding ${i + 1}</b>${esc(x)}</li>`).join("")}</ol>` : ""}
+    </div>`;
+}
+
+function renderCase(){
+  const c = cur.data;
+  const slots = [];
+  for (let i = 0; i < MAX_GUESSES; i++){
+    const g = cur.guesses[i];
+    if (g === undefined) slots.push(`<div class="slot" aria-label="Guess ${i + 1}, empty"></div>`);
+    else {
+      const cls = guessClass(g);
+      const label = { hit:"Correct", near:"Right chapter", miss:"Miss" }[cls];
+      slots.push(`<div class="slot filled ${cls}" aria-label="Guess ${i + 1}: ${label}">${label}</div>`);
+    }
+  }
+  const optHtml = c.diagnosis_options.map((_, pos) => {
+    const o = c.diagnosis_options[cur.dxOrder[pos]];
+    const guessed = cur.guesses.includes(pos);
+    let cls = "opt round";
+    if (guessed) cls += " " + ({ hit:"ok", near:"near", miss:"bad" }[guessClass(pos)]);
+    else if (cur.dxDone && pos === cur.correctPos) cls += " missed";
+    else if (cur.dxDone) cls += " gone";
+    return `<button class="${cls}" data-pos="${pos}" ${guessed || cur.dxDone ? "disabled" : ""}>
+      <span class="box" aria-hidden="true">${guessed ? (pos === cur.correctPos ? "✓" : "×") : ""}</span>
+      <span>${esc(o.label)}${guessed || cur.dxDone ? `<small>${esc(o.chapter)}</small>` : ""}</span></button>`;
+  }).join("");
+
+  const ans = c.diagnosis_options[c.correct_diagnosis_index];
+  const left = MAX_GUESSES - cur.guesses.length;
+  app.innerHTML = `
+    ${caseHeader()}
+    <div class="attempts" aria-label="Diagnosis guesses">${slots.join("")}</div>
+    <div class="legend" aria-hidden="true"><span><i style="background:var(--hit)"></i>Correct</span><span><i style="background:var(--near)"></i>Same DSM-5-TR chapter</span><span><i style="background:var(--miss)"></i>Miss</span></div>
+    <p class="prompt">${cur.dxDone ? (cur.dxSolved ? "Diagnosis confirmed" : "Out of guesses") : "What is the most likely diagnosis?"}</p>
+    <p class="hint">${cur.dxDone
+      ? `The diagnosis is <b>${esc(ans.label)}</b>${c.specifier ? ` (${esc(c.specifier)})` : ""}.`
+      : `${left} ${left === 1 ? "guess" : "guesses"} left. A wrong guess adds a new finding to the case.`}</p>
+    <div class="opts">${optHtml}</div>
+    ${cur.dxDone ? `<div class="actions"><button class="primary" id="toQs">Continue to the clinical questions</button></div>` : ""}`;
+
+  app.querySelectorAll("[data-pos]").forEach(b => b.onclick = () => guess(+b.dataset.pos));
+  const tq = $("#toQs"); if (tq) tq.onclick = () => { renderQuestion(); window.scrollTo(0, 0); };
+}
+
+function guess(pos){
+  if (cur.dxDone || cur.guesses.includes(pos)) return;
+  cur.guesses.push(pos);
+  if (pos === cur.correctPos){ cur.dxDone = true; cur.dxSolved = true; }
+  else if (cur.guesses.length >= MAX_GUESSES){ cur.dxDone = true; }
+  const y = window.scrollY;
+  renderCase();
+  window.scrollTo(0, y);
+  if (!cur.dxDone){ const cl = app.querySelector(".clues li:last-child"); if (cl) cl.scrollIntoView({ block:"center", behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" }); }
+}
+
+function renderQuestion(){
+  const c = cur.data, qi = cur.qIndex, q = c.questions[qi], order = cur.qOrders[qi];
+  const multi = q.type === "multi";
+  const optHtml = order.map((orig, pos) => {
+    const sel = cur.picked.has(orig);
+    let cls = "opt" + (multi ? "" : " round");
+    let mark = sel ? "✓" : "";
+    if (cur.checked){
+      const isRight = q.correct.includes(orig);
+      if (sel && isRight){ cls += " ok"; mark = "✓"; }
+      else if (sel && !isRight){ cls += " bad"; mark = "×"; }
+      else if (!sel && isRight){ cls += " missed"; }
+    }
+    return `<button class="${cls}" data-o="${orig}" aria-pressed="${sel}" ${cur.checked ? "disabled" : ""}><span class="box" aria-hidden="true">${mark}</span><span>${esc(q.options[orig])}</span></button>`;
+  }).join("");
+  const res = cur.qResults[qi];
+  app.innerHTML = `
+    <details class="panel" style="margin-top:16px"><summary><b>Case: ${esc(c.patient?.alias || c.title)}</b> <span class="muted small">(tap to reread)</span></summary><div style="margin-top:10px" class="vignette small">${esc(c.vignette)}</div>
+      ${c.clues.length ? `<ol class="clues">${c.clues.map((x, i) => `<li><b>Finding ${i + 1}</b>${esc(x)}</li>`).join("")}</ol>` : ""}</details>
+    <div class="qhead"><span class="cat">${esc(q.category)}</span><span class="progress">Question ${qi + 1} of ${c.questions.length}</span></div>
+    <p class="prompt">${esc(q.prompt)}</p>
+    <p class="hint">${multi ? "Select all that apply." : "Choose one."}</p>
+    <div class="opts">${optHtml}</div>
+    ${cur.checked ? `<div class="verdict ${res ? "good" : "poor"}" role="status"><b>${res ? "Correct" : "Not quite"}</b>${esc(q.rationale)}</div>` : ""}
+    <div class="actions"><button class="primary" id="qBtn" ${!cur.checked && !cur.picked.size ? "disabled" : ""}>${cur.checked ? (qi + 1 < c.questions.length ? "Next question" : "See the debrief") : "Check answer"}</button></div>`;
+
+  app.querySelectorAll("[data-o]").forEach(b => b.onclick = () => {
+    const o = +b.dataset.o;
+    if (multi){ cur.picked.has(o) ? cur.picked.delete(o) : cur.picked.add(o); }
+    else { cur.picked = new Set([o]); }
+    renderQuestion();
+  });
+  $("#qBtn").onclick = () => {
+    if (!cur.checked){
+      const ok = cur.picked.size === q.correct.length && q.correct.every(k => cur.picked.has(k));
+      cur.qResults[qi] = ok; cur.checked = true; renderQuestion();
+      const v = app.querySelector(".verdict"); if (v) v.scrollIntoView({ block:"nearest" });
+    } else {
+      cur.picked = new Set(); cur.checked = false;
+      if (qi + 1 < c.questions.length){ cur.qIndex++; renderQuestion(); window.scrollTo(0, 0); }
+      else finishCase();
+    }
+  };
+}
+
+function scoreOf(g){
+  const dxPts = g.dxSolved ? (MAX_GUESSES + 1 - g.guesses.length) : 0; // 3, 2 or 1
+  const qPts = g.qResults.filter(Boolean).length;
+  return { score: dxPts + qPts, max: MAX_GUESSES + g.data.questions.length };
+}
+
+function finishCase(){
+  const { score, max } = scoreOf(cur);
+  if (!cur.data._sample){
+    const st = S.stats;
+    st.played++; st.points += score; st.max += max;
+    if (cur.dxSolved){ st.solved++; st.streak++; st.best = Math.max(st.best, st.streak); } else st.streak = 0;
+    saveStats();
+    const c = cur.data;
+    S.history.unshift({ date: Date.now(), domain: c.domain, dx: c.diagnosis_options[c.correct_diagnosis_index].label, score, max,
+      game: { data: c, dxOrder: cur.dxOrder, correctPos: cur.correctPos, guesses: cur.guesses, dxSolved: cur.dxSolved, dxDone:true, qResults: cur.qResults } });
+    saveHistory();
+  }
+  renderDebrief();
+}
+
+function emojiLine(g){
+  const dx = g.guesses.map(p => {
+    if (p === g.correctPos) return "🟩";
+    const o = g.data.diagnosis_options[g.dxOrder[p]], a = g.data.diagnosis_options[g.data.correct_diagnosis_index];
+    return norm(o.chapter) === norm(a.chapter) ? "🟨" : "⬜";
+  }).join("");
+  const qs = g.qResults.map(r => r ? "✅" : "❌").join("");
+  return { dx, qs };
+}
+
+function renderDebrief(){
+  cur.finished = true;
+  const g = cur, c = g.data, d = c.debrief;
+  const { score, max } = scoreOf(g);
+  const e = emojiLine(g);
+  const ans = c.diagnosis_options[c.correct_diagnosis_index];
+  const verdClass = v => v === "Ruled out" ? "Ruled" : v;
+  app.innerHTML = `
+    <div class="panel" style="margin-top:16px">
+      <div class="result">
+        <div><div class="muted small">${g.dxSolved ? `Solved in ${g.guesses.length} ${g.guesses.length === 1 ? "guess" : "guesses"}` : "Diagnosis missed"}</div>
+          <div class="answer">${esc(ans.label)}</div>
+          ${c.specifier ? `<div class="small muted">${esc(c.specifier)}</div>` : ""}</div>
+        <div class="big" aria-label="Score ${score} of ${max}">${score}/${max}</div>
+      </div>
+      <div class="grid-emoji" aria-hidden="true" style="margin-top:8px">${e.dx} ${e.qs}</div>
+    </div>
+
+    <h2>Overview</h2>
+    <p class="readable">${esc(d.overview)}</p>
+
+    <h2>Reasoning</h2>
+    <p class="readable">${esc(d.reasoning)}</p>
+    ${d.criteria_met.length ? `<h3>Criteria met</h3><ul class="plain">${d.criteria_met.map(x => `<li>${esc(x)}</li>`).join("")}</ul>` : ""}
+
+    <h2>Differential diagnosis</h2>
+    <ul class="ddx">${d.differentials.map(x => `<li><div class="row"><span class="name">${esc(x.diagnosis)}</span><span class="verd ${verdClass(x.verdict)}">${esc(x.verdict)}</span></div><p>${esc(x.reasoning)}</p></li>`).join("")}</ul>
+
+    <h2>Assessment procedure</h2>
+    <ul class="plain">${d.assessment_plan.map(x => `<li>${esc(x)}</li>`).join("")}</ul>
+
+    <h2>Areas of functioning</h2>
+    <ul class="plain">${d.functioning_areas.map(x => `<li>${esc(x)}</li>`).join("")}</ul>
+
+    <h2>Holistic intervention</h2>
+    <dl class="plan">${d.intervention_plan.map(x => `<dt>${esc(x.area)}</dt><dd>${esc(x.actions)}</dd>`).join("")}</dl>
+
+    ${d.domain_note ? `<h2>Clinical note</h2><p>${esc(d.domain_note)}</p>` : ""}
+
+    <h2>Your answers</h2>
+    <ul class="plain">${c.questions.map((q, i) => `<li><b>${g.qResults[i] ? "✓" : "×"} ${esc(q.category)}:</b> ${esc(q.correct.map(k => q.options[k]).join("; "))}</li>`).join("")}</ul>
+
+    <div class="actions stack">
+      <button class="primary" id="again">New case</button>
+      <button class="secondary" id="share">Share result</button>
+      <button class="secondary" id="home">Back to home</button>
+    </div>
+    <p class="note">AI-generated for study. Check the diagnosis, tests and treatments against the DSM-5-TR and your class notes.</p>`;
+  $("#again").onclick = newCase;
+  $("#home").onclick = renderHome;
+  $("#share").onclick = async () => {
+    const text = `Dx Rounds: ${c.domain} case\n${e.dx} ${e.qs}  ${score}/${max}`;
+    try{
+      if (navigator.share) await navigator.share({ text });
+      else { await navigator.clipboard.writeText(text); toast("Result copied"); }
+    }catch(err){ /* share sheet closed */ }
+  };
+  window.scrollTo(0, 0);
+}
+
+/* ---------------- Settings ---------------- */
+const dlg = $("#settings");
+function fillModels(list, chosen){
+  const sel = $("#modelSelect");
+  const opts = list.length ? list : (chosen ? [chosen] : []);
+  sel.innerHTML = opts.length ? opts.map(m => `<option value="${esc(m)}" ${m === chosen ? "selected" : ""}>${esc(m)}</option>`).join("")
+                              : `<option value="">Check your key to load models</option>`;
+}
+function openSettings(){
+  $("#keyInput").value = S.settings.apiKey || "";
+  $("#phToggle").checked = !!S.settings.ph;
+  fillModels(S.settings.models || [], S.settings.model);
+  $("#keyStatus").textContent = S.settings.model ? `Using ${S.settings.model}.` : "";
+  $("#keyStatus").className = "status";
+  if (typeof dlg.showModal === "function") dlg.showModal(); else dlg.setAttribute("open", "");
+}
+$("#settingsBtn").onclick = openSettings;
+$("#homeBtn").onclick = () => { if (!cur || cur.finished || confirm("Leave this case and go home?")) renderHome(); };
+$("#testKey").onclick = async () => {
+  const key = $("#keyInput").value.trim(), st = $("#keyStatus");
+  if (!key){ st.textContent = "Paste your key first."; st.className = "status bad"; return; }
+  st.textContent = "Checking…"; st.className = "status";
+  try{
+    const models = await listModels(key);
+    if (!models.length) throw Object.assign(new Error("none"), { friendly:"The key works, but no text models were listed for it." });
+    S.settings.models = models;
+    const keep = models.includes(S.settings.model) ? S.settings.model : models[0];
+    fillModels(models, keep);
+    st.textContent = `Key works. ${models.length} models available; ${keep} selected.`; st.className = "status ok";
+  }catch(err){
+    st.textContent = err.friendly || ("Couldn't reach Gemini: " + err.message); st.className = "status bad";
+  }
+};
+$("#setForm").addEventListener("submit", () => {
+  S.settings.apiKey = $("#keyInput").value.trim();
+  S.settings.model = $("#modelSelect").value || S.settings.model;
+  S.settings.ph = $("#phToggle").checked;
+  saveSettings();
+  if (!cur) renderHome();
+  toast("Settings saved");
+});
+$("#clearData").onclick = () => {
+  if (!confirm("Delete all saved cases and stats on this phone? This can't be undone.")) return;
+  S.history = []; S.stats = { played:0, solved:0, points:0, max:0, streak:0, best:0 };
+  saveHistory(); saveStats(); if (!cur) renderHome(); toast("History cleared");
+};
+
+/* ---------------- Start ---------------- */
+if ("serviceWorker" in navigator && location.protocol.startsWith("http")){
+  navigator.serviceWorker.register("sw.js").catch(() => {});
+}
+renderHome();
+</script>
+</body>
+</html>
