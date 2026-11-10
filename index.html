@@ -276,37 +276,83 @@ async function apiError(res){
   else if (res.status === 401 || res.status === 403) e.friendly = "This API key isn't allowed to use the Gemini API. Create a key at aistudio.google.com/apikey and paste it in Settings.";
   else if (res.status === 404) e.friendly = "That model isn't available for your key. Open Settings, tap “Check key and load models”, and pick another.";
   else if (res.status === 429) e.friendly = "You've reached Gemini's free limit for this model. Wait a minute, or switch to a Flash-Lite model in Settings.";
-  else if (res.status >= 500) e.friendly = "Gemini is busy right now. Try again in a moment.";
+  else if (res.status >= 500) e.friendly = "Gemini stayed busy after several retries, including on a backup model. Wait a few minutes and try again, or pick a different model in Settings.";
   return e;
 }
 
-async function generateJSON(prompt, schema){
-  const { apiKey, model } = S.settings;
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+let onProgress = () => {};
+
+// Other models to fall back on when the chosen one is busy: Flash-Lite first, stable names before previews.
+function fallbackModels(chosen){
+  const list = (S.settings.models || []).filter(m => m !== chosen);
+  const score = m => (/flash-lite/i.test(m) ? 0 : /flash/i.test(m) ? 1 : 2) + (/(preview|exp|latest)/i.test(m) ? 0.5 : 0);
+  return list.sort((a, b) => score(a) - score(b)).slice(0, 2);
+}
+
+async function postOnce(model, body){
   const url = `${API}/models/${encodeURIComponent(model)}:generateContent`;
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 110000);
+  try{
+    const res = await fetch(url, { method:"POST", signal: ctrl.signal,
+      headers:{ "Content-Type":"application/json", "x-goog-api-key": S.settings.apiKey }, body: JSON.stringify(body) });
+    if (!res.ok) throw await apiError(res);
+    return await res.json();
+  }catch(e){
+    if (e.name === "AbortError"){ const t = new Error("timeout"); t.status = 504; t.raw = "The request took too long and was stopped."; throw t; }
+    if (!e.status && e instanceof TypeError){ const n = new Error("network"); n.status = 0; n.raw = e.message;
+      n.friendly = "Couldn't reach Gemini. Check your internet connection and try again."; throw n; }
+    throw e;
+  }finally{ clearTimeout(timer); }
+}
+
+async function generateJSON(prompt, schema){
   const base = { contents:[{ role:"user", parts:[{ text: prompt }] }] };
-  // Try the current structured-output format first, then older formats if the API rejects them.
+  // Current structured-output format first, then simpler formats. A 400 or a lasting 5xx moves to the next one.
   const variants = [
     { generationConfig:{ temperature:1, responseFormat:{ text:{ mimeType:"APPLICATION_JSON", schema } } } },
     { generationConfig:{ temperature:1, responseMimeType:"application/json", responseJsonSchema: schema } },
     { generationConfig:{ temperature:1, responseMimeType:"application/json" } },
     { generationConfig:{ temperature:1 } }
   ];
+  const models = [S.settings.model, ...fallbackModels(S.settings.model)];
   let lastErr;
-  for (const v of variants){
-    const res = await fetch(url, { method:"POST", headers:{ "Content-Type":"application/json", "x-goog-api-key": apiKey }, body: JSON.stringify(Object.assign({}, base, v)) });
-    if (!res.ok){
-      const err = await apiError(res);
-      if (res.status === 400 && !/api key/i.test(err.raw || "")) { lastErr = err; continue; } // format not accepted: try next
-      throw err;
+  for (let mi = 0; mi < models.length; mi++){
+    const model = models[mi];
+    if (mi > 0) onProgress(`${models[mi - 1]} is busy. Trying ${model} instead…`);
+    let skipModel = false;
+    for (const v of variants){
+      for (let attempt = 0; attempt < 3; attempt++){
+        try{
+          const data = await postOnce(model, Object.assign({}, base, v));
+          const block = data.promptFeedback?.blockReason;
+          const cand = data.candidates?.[0];
+          if (block || /SAFETY|PROHIBITED|BLOCK/i.test(cand?.finishReason || "")){
+            const e = new Error("blocked"); e.friendly = "Gemini's safety filter blocked this case. Tap “Try again” for a different one."; throw e;
+          }
+          const text = (cand?.content?.parts || []).filter(p => !p.thought).map(p => p.text || "").join("");
+          const out = parseJSON(text);
+          out._model = model;
+          return out;
+        }catch(err){
+          lastErr = Object.assign(err, { model });
+          if (err.message === "blocked") throw err;
+          if (err instanceof SyntaxError){ break; }                                   // unreadable JSON: try a simpler format
+          if (err.status === 400 && !/api key|FAILED_PRECONDITION|not available in your country/i.test(err.raw || "")) break; // format rejected
+          if (err.status === 401 || err.status === 403 || err.status === 400) throw err; // key or account problem: stop
+          if (err.status === 404 || err.status === 429){ skipModel = true; break; }   // model missing or out of quota: next model
+          if (err.status === 0) throw err;                                            // no internet
+          if (err.status >= 500){                                                     // busy: wait and retry
+            if (attempt < 2){ onProgress(`Gemini is busy. Retrying (${attempt + 2} of 3)…`); await sleep(attempt === 0 ? 3000 : 8000); continue; }
+            if (err.status === 500){ break; }                                         // internal error: a simpler format may help
+            skipModel = true; break;                                                  // overloaded or timed out: next model
+          }
+          throw err;
+        }
+      }
+      if (skipModel) break;
     }
-    const data = await res.json();
-    const block = data.promptFeedback?.blockReason;
-    const cand = data.candidates?.[0];
-    if (block || /SAFETY|PROHIBITED|BLOCK/i.test(cand?.finishReason || "")){
-      const e = new Error("blocked"); e.friendly = "Gemini's safety filter blocked this case. Tap “Try again” for a different one."; throw e;
-    }
-    const text = (cand?.content?.parts || []).filter(p => !p.thought).map(p => p.text || "").join("");
-    return parseJSON(text);
   }
   throw lastErr || new Error("Request failed");
 }
@@ -537,7 +583,9 @@ function renderLoading(domain){
   </div>`;
 }
 function renderError(err, retry){
-  app.innerHTML = `<div class="error" role="alert"><b>Couldn't get a new case</b>${esc(err.friendly || err.message || "Something went wrong.")}</div>
+  const detail = [err.status ? "HTTP " + err.status : "", err.model || "", err.raw || ""].filter(Boolean).join(", ");
+  app.innerHTML = `<div class="error" role="alert"><b>Couldn't get a new case</b>${esc(err.friendly || err.message || "Something went wrong.")}
+      ${detail ? `<p class="small" style="margin:8px 0 0">Details from Google: ${esc(detail)}</p>` : ""}</div>
     <div class="actions stack"><button class="primary" id="retry">Try again</button><button class="secondary" id="toSettings">Open settings</button><button class="secondary" id="toHome">Back to home</button></div>`;
   $("#retry").onclick = retry; $("#toSettings").onclick = openSettings; $("#toHome").onclick = renderHome;
 }
@@ -550,6 +598,7 @@ async function newCase(){
   const avoid = S.history.filter(h => h.domain === domain).slice(0, 8).map(h => h.dx);
   const prompt = buildPrompt(domain, set.difficulty, set.ph, avoid);
   const slow = setTimeout(() => { const m = $("#loadMsg"); if (m) m.textContent = "Still writing. Longer cases can take up to a minute."; }, 25000);
+  onProgress = msg => { const m = $("#loadMsg"); if (m) m.textContent = msg; };
   try{
     let c, errs = ["first try"];
     for (let attempt = 0; attempt < 2 && errs.length; attempt++){
@@ -557,8 +606,10 @@ async function newCase(){
       errs = validateCase(c);
     }
     if (errs.length){ const e = new Error("bad case"); e.friendly = "Gemini returned an incomplete case. Try again."; throw e; }
+    const used = c._model;
     c = tidyCase(c); c.domain = domain; c.difficulty = set.difficulty;
     startCase(c);
+    if (used && used !== set.model) toast(`Written by ${used} because ${set.model} was busy`);
   }catch(err){
     renderError(err, newCase);
   }finally{ clearTimeout(slow); }
